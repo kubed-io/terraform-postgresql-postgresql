@@ -5,9 +5,9 @@ variable "name" {
 
 variable "owner" {
   description = "(Optional) The role name of the user who will own the database, or DEFAULT to use the default (namely, the user executing the command). To create a database owned by another role or to change the owner of an existing database, you must be a direct or indirect member of the specified role, or the username in the provider is a superuser."
-  type    = string
-  default = null
-  nullable = true
+  type        = string
+  default     = null
+  nullable    = true
 }
 
 variable "tablespace_name" {
@@ -68,16 +68,16 @@ variable "encoding" {
 
 variable "schemas" {
   description = "(Optional) A set of schemas to create in the database after it has been created. Each schema will be owned by the database owner."
-  type        = set(object({
-    name  = string
-    owner = optional(string)
+  type = set(object({
+    name        = string
+    owner       = optional(string)
     ifNotExists = optional(bool, true)
     dropCascade = optional(bool, false)
     policies = optional(set(object({
-      create       = optional(bool)
-      usage       = optional(bool)
-      role       = optional(string)
+      create = optional(bool)
+      usage  = optional(bool)
+      role   = optional(string)
     })), [])
   }))
-  default     = []
+  default = []
 }
