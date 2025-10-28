@@ -4,8 +4,8 @@ resource "postgresql_grant" "this" {
       grant.role,
       grant.schema,
       grant.objectType,
-      join("-", try(grant.objects, [])),
-      join("-", try(grant.columns, []))
+      join("-", coalesce(grant.objects, [])),
+      join("-", coalesce(grant.columns, []))
     ])) => grant
   }
   database          = postgresql_database.this.name
@@ -13,7 +13,7 @@ resource "postgresql_grant" "this" {
   privileges        = each.value.privileges
   schema            = each.value.schema
   object_type       = each.value.objectType
-  objects           = try(each.value.objects, [])
-  columns           = try(each.value.columns, [])
+  objects           = each.value.objects
+  columns           = each.value.columns
   with_grant_option = each.value.withGrantOption
 }
