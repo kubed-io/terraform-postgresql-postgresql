@@ -1,0 +1,174 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: databases.postgresql.kubed.io
+spec:
+  scope: Cluster
+  group: postgresql.kubed.io
+  names:
+    kind: Database
+    plural: databases
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              owner:
+                type: string
+                description: "(Optional) The role name of the user who will own the database, or DEFAULT to use the default (namely, the user executing the command). To create a database owned by another role or to change the owner of an existing database, you must be a direct or indirect member of the specified role, or the username in the provider is a superuser."
+                default: null
+                nullable: true
+              tablespaceName:
+                type: string
+                description: "(Optional) The name of the tablespace that will be associated with the database, or DEFAULT to use the template database's tablespace. This tablespace will be the default tablespace used for objects created in this database."
+                default: null
+                nullable: true
+              template:
+                type: string
+                description: "(Optional) The name of the template database from which to create the database, or DEFAULT to use the default template (template0). NOTE: the default in Terraform is template0, not template1. Changing this value will force the creation of a new resource as this value can only be changed when a database is created."
+                default: null
+                nullable: true
+              connectionLimit:
+                type: integer
+                description: "(Optional) How many concurrent connections can be established to this database. -1 (the default) means no limit."
+                default: -1
+                nullable: true
+              allowConnections:
+                type: boolean
+                description: "(Optional) If false then no one can connect to this database. The default is true, allowing connections (except as restricted by other mechanisms, such as GRANT or REVOKE CONNECT)."
+                default: true
+                nullable: true
+              isTemplate:
+                type: boolean
+                description: "(Optional) If true, then this database can be cloned by any user with CREATEDB privileges; if false (the default), then only superusers or the owner of the database can clone it."
+                default: false
+                nullable: true
+              lcCollate:
+                type: string
+                description: "(Optional) Collation order (LC_COLLATE) to use in the database. This affects the sort order applied to strings, e.g. in queries with ORDER BY, as well as the order used in indexes on text columns. If unset or set to an empty string the default collation is set to C. If set to DEFAULT Terraform will use the same collation order as the specified template database. Changing this value will force the creation of a new resource as this value can only be changed when a database is created."
+                default: null
+                nullable: true
+              lcCtype:
+                type: string
+                description: "(Optional) Character classification (LC_CTYPE) to use in the database. This affects the categorization of characters, e.g. lower, upper and digit. If unset or set to an empty string the default character classification is set to C. If set to DEFAULT Terraform will use the character classification of the specified template database. Changing this value will force the creation of a new resource as this value can only be changed when a database is created."
+                default: null
+                nullable: true
+              encoding:
+                type: string
+                description: "(Optional) Character set encoding to use in the database. Specify a string constant (e.g. UTF8 or SQL_ASCII), or an integer encoding number. If unset or set to an empty string the default encoding is set to UTF8. If set to DEFAULT Terraform will use the same encoding as the template database. Changing this value will force the creation of a new resource as this value can only be changed when a database is created."
+                default: null
+                nullable: true
+              schemas:
+                type: array
+                description: "(Optional) A set of schemas to create in the database after it has been created. Each schema will be owned by the database owner."
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: "The name of the schema."
+                    owner:
+                      type: string
+                      description: "(Optional) The owner of the schema."
+                      nullable: true
+                    ifNotExists:
+                      type: boolean
+                      description: "(Optional) If true, do not throw an error if the schema already exists. Default is true."
+                      default: true
+                    dropCascade:
+                      type: boolean
+                      description: "(Optional) If true, drop the schema and all its objects. Default is false."
+                      default: false
+                    policies:
+                      type: array
+                      description: "(Optional) Set of policies to apply to the schema."
+                      items:
+                        type: object
+                        properties:
+                          create:
+                            type: boolean
+                            description: "(Optional) Allow create privilege."
+                            nullable: true
+                          usage:
+                            type: boolean
+                            description: "(Optional) Allow usage privilege."
+                            nullable: true
+                          role:
+                            type: string
+                            description: "(Optional) Role to which the policy applies."
+                            nullable: true
+                        default: {}
+                      default: []
+                default: []
+              grants:
+                type: array
+                description: "(Optional) A set of grants to apply to the database after it has been created."
+                items:
+                  type: object
+                  properties:
+                    role:
+                      type: string
+                      description: "Role to which the grant applies."
+                    privileges:
+                      type: array
+                      items:
+                        type: string
+                      description: "Set of privileges to grant."
+                    schema:
+                      type: string
+                      description: "(Optional) Schema to which the grant applies."
+                      nullable: true
+                      default: null
+                    objectType:
+                      type: string
+                      description: |
+                        (Optional) The PostgreSQL object type to grant the privileges on one of:
+                        database, schema, table, sequence, function, procedure, routine, foreign_data_wrapper, foreign_server, column). Default is 'database'.
+                      default: database
+                      enum:
+                        - database
+                        - schema
+                        - table
+                        - sequence
+                        - function
+                        - procedure
+                        - routine
+                        - foreign_data_wrapper
+                        - foreign_server
+                        - column
+                    objects:
+                      type: array
+                      items:
+                        type: string
+                      description: "(Optional) Set of objects to grant privileges on."
+                      nullable: true
+                      default: null
+                    columns:
+                      type: array
+                      items:
+                        type: string
+                      description: "(Optional) Set of columns to grant privileges on."
+                      nullable: true
+                      default: null
+                    withGrantOption:
+                      type: boolean
+                      description: "(Optional) Whether the grant is with grant option. Default is false."
+                      default: false
+                  required:
+                    - role
+                    - privileges
+                default: []
+          status:
+            description: A Status represents the observed state
+            type: object
+            properties:
+              share:
+                description: Freeform field containing status information
+                type: object
+                x-kubernetes-preserve-unknown-fields: true

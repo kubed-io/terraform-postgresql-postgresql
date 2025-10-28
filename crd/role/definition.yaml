@@ -1,0 +1,68 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: roles.postgresql.kubed.io
+spec:
+  scope: Cluster
+  group: postgresql.kubed.io
+  names:
+    kind: Role
+    plural: roles
+  versions:
+  - name: v1alpha1
+    served: true
+    referenceable: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              connectionLimit:
+                description: (Optional) If this role can log in, this specifies how many concurrent connections the role can establish. -1 (the default) means no limit.
+                type: integer
+                nullable: true
+                default: null
+              roles:
+                description: Defines list of roles which will be granted to this new role.
+                type: array
+                items:
+                  type: string
+                nullable: true
+              privileges:
+                description: (Optional) A map of privilege flags to give to the role.
+                type: object
+                properties:
+                  superuser:
+                    description: (Optional) Defines whether the role is a "superuser", and therefore can override all access restrictions within the database. Default value is false.
+                    type: boolean
+                    default: false
+                  inherit:
+                    description: (Optional) Defines whether the role inherits privileges of roles it is a member of. Default value is true.
+                    type: boolean
+                    default: true
+                  login:
+                    description: (Optional) Defines whether the role can log in. Default value is false.
+                    type: boolean
+                    default: false
+                  replication:
+                    description: (Optional) Defines whether the role can initiate streaming replication or put the system in and out of backup mode. Default value is false.
+                    type: boolean
+                    default: false
+                  createRole:
+                    description: (Optional) Defines whether the role can create other roles. Default value is false.
+                    type: boolean
+                    default: false
+                  createDatabase:
+                    description: (Optional) Defines whether the role can create new databases. Default value is false.
+                    type: boolean
+                    default: false
+          status:
+            description: A Status represents the observed state
+            type: object
+            properties:
+              share:
+                description: Freeform field containing status information
+                type: object
+                x-kubernetes-preserve-unknown-fields: true

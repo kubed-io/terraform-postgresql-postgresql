@@ -1,0 +1,96 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: databases.postgresql.kubed.io
+spec:
+  writeConnectionSecretsToNamespace: crossplane
+  compositeTypeRef:
+    apiVersion: postgresql.kubed.io/v1alpha1
+    kind: Database
+  mode: Pipeline
+  pipeline:
+  - step: module
+    functionRef:
+      name: patch-and-transform
+    input:
+      apiVersion: pt.fn.crossplane.io/v1beta1
+      kind: Resources
+      resources: 
+      - name: workspace
+        base: 
+          apiVersion: opentofu.upbound.io/v1beta1
+          kind: Workspace
+          metadata:
+            name: postgresql-role
+            annotations:
+              kubernetes.io/description: |
+                Creates a PostgreSQL role. 
+          spec:
+            providerConfigRef:
+              name: postgresql
+            forProvider:
+              source: Remote
+              module: github.com/kubed-io/terraform-postgresql-postgresql//modules/database?ref=main
+              # filled out by the patch-and-transform function 
+              varmap: {}
+        patches: 
+
+        # name after the instance name
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.name
+          transforms:
+          - type: string
+            string:
+              type: Format
+              fmt: "%s.databases.postgresql"
+
+        # now set the actual workspace name as the external name
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.annotations[crossplane.io/external-name]
+          transforms:
+          - type: string
+            string:
+              type: Format
+              fmt: "%s-database"
+
+        # bind instance name to name variable
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.varmap.name
+
+        # map the rest of the properties
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.connectionLimit
+          toFieldPath: spec.forProvider.varmap.connection_limit
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.owner
+          toFieldPath: spec.forProvider.varmap.owner
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.tablespaceName
+          toFieldPath: spec.forProvider.varmap.tablespace_name
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.template
+          toFieldPath: spec.forProvider.varmap.template
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.allowConnections
+          toFieldPath: spec.forProvider.varmap.allow_connections
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.isTemplate
+          toFieldPath: spec.forProvider.varmap.is_template
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.lcCollate
+          toFieldPath: spec.forProvider.varmap.lc_collate
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.lcCtype
+          toFieldPath: spec.forProvider.varmap.lc_ctype
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.encoding
+          toFieldPath: spec.forProvider.varmap.encoding
+
+        # now map the schemas to the 
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.schemas
+          toFieldPath: spec.forProvider.varmap.schemas
+            

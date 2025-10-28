@@ -1,0 +1,81 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: roles.postgresql.kubed.io
+spec:
+  writeConnectionSecretsToNamespace: crossplane
+  compositeTypeRef:
+    apiVersion: postgresql.kubed.io/v1alpha1
+    kind: Role
+  mode: Pipeline
+  pipeline:
+  - step: module
+    functionRef:
+      name: patch-and-transform
+    input:
+      apiVersion: pt.fn.crossplane.io/v1beta1
+      kind: Resources
+      resources: 
+      - name: workspace
+        base: 
+          apiVersion: opentofu.upbound.io/v1beta1
+          kind: Workspace
+          metadata:
+            name: postgresql-role
+            annotations:
+              kubernetes.io/description: |
+                Creates a PostgreSQL role. 
+          spec:
+            providerConfigRef:
+              name: postgresql
+            forProvider:
+              source: Remote
+              module: github.com/kubed-io/terraform-postgresql-postgresql//modules/role?ref=main
+              # filled out by the patch-and-transform function in the composition
+              varmap: {}
+            # these get overwritten by the patch transformer
+            # writeConnectionSecretToRef:
+            #   namespace: data  # default, but can be overridden by secretTargetNamespace
+            #   name: postgresql-entry
+        patches: 
+
+        # name after the instance name
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.name
+          transforms:
+          - type: string
+            string:
+              type: Format
+              fmt: "%s.roles.postgresql"
+
+        # now set the actual workspace name as the external name
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: metadata.annotations[crossplane.io/external-name]
+          transforms:
+          - type: string
+            string:
+              type: Format
+              fmt: "%s-role"
+
+        # bind instance name to name variable
+        - type: FromCompositeFieldPath
+          fromFieldPath: metadata.name
+          toFieldPath: spec.forProvider.varmap.name
+
+        # bind connection limit
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.connectionLimit
+          toFieldPath: spec.forProvider.varmap.connectionLimit
+
+        # bind the roles
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.roles
+          toFieldPath: spec.forProvider.varmap.roles
+
+        # bind the privileges
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.privileges
+          toFieldPath: spec.forProvider.varmap.privileges
+            
