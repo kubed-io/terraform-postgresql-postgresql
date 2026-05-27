@@ -1,0 +1,13 @@
+apiVersion: postgresql.kubed.io/v1alpha1
+kind: Database
+metadata:
+  name: drupal
+spec:
+  owner: drupal
+  schemas:
+  - name: drupal
+  grants:
+  - role: drupal
+    privileges:
+    - CONNECT
+    - CREATE

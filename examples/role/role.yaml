@@ -1,0 +1,7 @@
+apiVersion: postgresql.kubed.io/v1alpha1
+kind: Role
+metadata:
+  name: drupal
+spec:
+  privileges:
+    login: true

@@ -1,0 +1,24 @@
+apiVersion: postgresql.kubed.io/v1alpha1
+kind: Server
+metadata:
+  name: psql-main
+spec:
+  host: psql.kellyferrone.com
+  port: 5432
+  sslmode: disable
+  credentialsRef:
+    namespace: data
+    name: psql-main-creds
+
+  # static roles always provisioned regardless of entry labels
+  roles:
+  - name: opentofu
+    privileges:
+      login: true
+      superuser: true
+
+  # opt LDAP entries in by labeling them:
+  # postgresql.kubed.io/server.psql-main: "true"
+  entrySelector:
+    matchLabels:
+      postgresql.kubed.io/server.psql-main: "true"
