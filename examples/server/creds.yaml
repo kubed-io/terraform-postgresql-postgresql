@@ -1,0 +1,20 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: psql-main-creds
+  namespace: data
+spec:
+  refreshPolicy: OnChange
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: homelab-vault
+  target:
+    name: psql-main-creds
+    creationPolicy: Owner
+  data:
+  - secretKey: username
+    remoteRef:
+      key: OpenTofu/username
+  - secretKey: password
+    remoteRef:
+      key: OpenTofu/password

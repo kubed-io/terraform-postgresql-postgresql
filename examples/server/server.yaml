@@ -3,7 +3,7 @@ kind: Server
 metadata:
   name: psql-main
 spec:
-  host: psql.kellyferrone.com
+  host: postgresql.data.svc.cluster.local
   port: 5432
   sslmode: disable
   credentialsRef:
@@ -12,10 +12,7 @@ spec:
 
   # static roles always provisioned regardless of entry labels
   roles:
-  - name: opentofu
-    privileges:
-      login: true
-      superuser: true
+  - name: test
 
   # opt LDAP entries in by labeling them:
   # postgresql.kubed.io/server.psql-main: "true"

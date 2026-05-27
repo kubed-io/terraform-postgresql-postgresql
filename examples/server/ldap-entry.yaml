@@ -1,0 +1,14 @@
+apiVersion: ldap.kubed.io/v1alpha1
+kind: Entry
+metadata:
+  name: psql-test
+  labels:
+    postgresql.kubed.io/server.psql-main: "true"
+spec:
+  base_dn: ou=services,dc=burbs
+  connectionSecret:
+    namespace: data
+  mail: psql-test@example.com
+  uidNumber: "1043"
+  gidNumber: "2007"
+  sn: test
