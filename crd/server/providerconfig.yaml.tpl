@@ -8,6 +8,7 @@ metadata:
   name: {{ $name }}
   annotations:
     gotemplating.fn.crossplane.io/composition-resource-name: provider-config
+    gotemplating.fn.crossplane.io/ready: "True"
 spec:
   configuration: |
     terraform {
