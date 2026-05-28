@@ -60,7 +60,7 @@ spec:
           {{-       end }}
           {{-     end }}
           {{-   end }}
-          {{-   $allRoles := concat $staticRoles $entryRoles }}
+          {{-   $allRoles := concat $staticRoles $entryRoles | default list }}
           ---
           apiVersion: opentofu.upbound.io/v1beta1
           kind: Workspace
