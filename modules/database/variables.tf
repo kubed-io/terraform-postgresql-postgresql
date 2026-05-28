@@ -82,6 +82,17 @@ variable "schemas" {
   default = []
 }
 
+variable "extensions" {
+  description = "(Optional) A set of extensions to create in the database."
+  type = set(object({
+    name          = string
+    schema        = optional(string, null)
+    dropCascade   = optional(bool, null)
+    createCascade = optional(bool, null)
+  }))
+  default = []
+}
+
 variable "grants" {
   # https://search.opentofu.org/provider/cyrilgdn/postgresql/v1.25.0/docs/resources/postgresql_grant
   description = "(Optional) A set of grants to apply to the database after it has been created."
