@@ -50,16 +50,17 @@ spec:
               {{- end }}
           ---
           {{- end }}
-          {{- $staticRoles := $spec.roles | default list }}
-          {{- $entryRoles  := list }}
-          {{- if .extraResources }}
-          {{-   with index .extraResources "entries" }}
-          {{-     range $e := .items }}
-          {{-       $entryRoles = append $entryRoles (dict "name" $e.resource.metadata.name) }}
+          {{- if not $spec.purge }}
+          {{-   $staticRoles := $spec.roles | default list }}
+          {{-   $entryRoles  := list }}
+          {{-   if .extraResources }}
+          {{-     with index .extraResources "entries" }}
+          {{-       range $e := .items }}
+          {{-         $entryRoles = append $entryRoles (dict "name" $e.resource.metadata.name) }}
+          {{-       end }}
           {{-     end }}
           {{-   end }}
-          {{- end }}
-          {{- $allRoles := concat $staticRoles $entryRoles }}
+          {{-   $allRoles := concat $staticRoles $entryRoles }}
           ---
           apiVersion: opentofu.upbound.io/v1beta1
           kind: Workspace
@@ -76,3 +77,4 @@ spec:
               module: github.com/kubed-io/terraform-postgresql-postgresql//modules/server?ref=main
               varmap:
                 roles: {{ $allRoles | toJson }}
+          {{- end }}

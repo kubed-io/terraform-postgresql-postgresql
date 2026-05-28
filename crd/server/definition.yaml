@@ -63,6 +63,13 @@ spec:
                     type: object
                     description: Labels that LDAP Entry resources must have to be included.
                     x-kubernetes-preserve-unknown-fields: true
+              purge:
+                type: boolean
+                default: false
+                description: |
+                  When true, passes an empty roles list to OpenTofu so all managed roles
+                  are destroyed on the next reconcile. Set this before deleting the Server
+                  to ensure a clean terraform destroy with no leftover roles in the database.
               roles:
                 type: array
                 description: |

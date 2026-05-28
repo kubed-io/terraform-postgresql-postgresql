@@ -10,6 +10,8 @@ spec:
     namespace: data
     name: psql-main-creds
 
+  purge: true
+
   # static roles always provisioned regardless of entry labels
   roles:
   - name: test
