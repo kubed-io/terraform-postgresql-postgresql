@@ -94,6 +94,11 @@ spec:
           fromFieldPath: spec.schemas
           toFieldPath: spec.forProvider.varmap.schemas
             
+        # now the extensions
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.extensions
+          toFieldPath: spec.forProvider.varmap.extensions
+
         # now the grants
         - type: FromCompositeFieldPath
           fromFieldPath: spec.grants

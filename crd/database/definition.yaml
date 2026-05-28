@@ -106,6 +106,30 @@ spec:
                         default: {}
                       default: []
                 default: []
+              extensions:
+                type: array
+                description: "(Optional) A set of extensions to create in the database."
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: The name of the extension.
+                    schema:
+                      type: string
+                      description: "(Optional) Schema to create the extension in."
+                      nullable: true
+                    dropCascade:
+                      type: boolean
+                      description: "(Optional) Drop the extension and all dependent objects. Default is false."
+                      nullable: true
+                    createCascade:
+                      type: boolean
+                      description: "(Optional) Create extension dependencies that are not already installed. Default is false."
+                      nullable: true
+                  required:
+                  - name
+                default: []
               grants:
                 type: array
                 description: "(Optional) A set of grants to apply to the database after it has been created."
