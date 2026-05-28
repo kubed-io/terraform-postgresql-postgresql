@@ -9,83 +9,23 @@ spec:
   mode: Pipeline
   pipeline:
 
-  # Step 1: create the Workspace using standard patches.
-  # Follows the same naming convention as the role and database compositions.
-  # varmap.roles is intentionally omitted here; the go-templating step
-  # merges static roles + entry names and writes the final list.
-  - step: workspace
+  # Step 1: render the ProviderConfig.
+  # Template content is in providerconfig.yaml.tpl — kustomize copies it here via replacements.
+  - step: render-provider-config
     functionRef:
-      name: patch-and-transform
+      name: go-templating
     input:
-      apiVersion: pt.fn.crossplane.io/v1beta1
-      kind: Resources
-      resources:
-      - name: workspace
-        base:
-          apiVersion: opentofu.upbound.io/v1beta1
-          kind: Workspace
-          metadata:
-            name: placeholder
-          spec:
-            forProvider:
-              source: Remote
-              module: github.com/kubed-io/terraform-postgresql-postgresql//modules/server?ref=main
-              varmap: {}
-        patches:
+      apiVersion: gotemplating.fn.crossplane.io/v1beta1
+      kind: GoTemplate
+      source: Inline
+      inline:
+        template: "# replaced by kustomize"
 
-        # name: {server-name}.server.postgresql
-        - type: FromCompositeFieldPath
-          fromFieldPath: metadata.name
-          toFieldPath: metadata.name
-          transforms:
-          - type: string
-            string:
-              type: Format
-              fmt: "%s.server.postgresql"
-
-        # external name used by the opentofu provider
-        - type: FromCompositeFieldPath
-          fromFieldPath: metadata.name
-          toFieldPath: metadata.annotations[crossplane.io/external-name]
-          transforms:
-          - type: string
-            string:
-              type: Format
-              fmt: "%s-server"
-
-        # point at the per-server ProviderConfig created in step 3
-        - type: FromCompositeFieldPath
-          fromFieldPath: metadata.name
-          toFieldPath: spec.providerConfigRef.name
-
-        # bind connection scalars into varmap so terraform can reference them
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.host
-          toFieldPath: spec.forProvider.varmap.host
-
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.port
-          toFieldPath: spec.forProvider.varmap.port
-
-        - type: FromCompositeFieldPath
-          fromFieldPath: spec.sslmode
-          toFieldPath: spec.forProvider.varmap.sslmode
-
-  # Step 2: create the ProviderConfig and write the final roles list into the
-  # Workspace varmap. go-templating is required here because:
-  #   - ProviderConfig.spec.configuration needs a dynamic terraform HCL string
-  #     with host/port/sslmode baked in (patch-and-transform cannot produce
-  #     a multi-line string value from multiple fields)
-  #   - entrySelector.matchLabels must be arbitrary (not hardcoded key), allowing
-  #     one Entry to be a member of multiple servers by carrying different labels
-  #   - varmap.roles must merge spec.roles (static) with LDAP Entry names
-  #     (requires reading extraResources and concatenating lists)
-  # The Workspace is re-output carrying over everything patch-and-transform
-  # set in step 1, with varmap.roles replaced by the merged list.
-  # go-templating ExtraResources uses two passes: first pass emits the resource
-  # declaration so crossplane fetches them; second pass has them available in
-  # .extraResources and builds the final roles list.
-  - step: provider-and-roles
+  # Step 2: declare ExtraResources for matching LDAP Entries, then build the Workspace.
+  # go-templating processes ExtraResources in the same function invocation:
+  # pass 1 declares the requirement (.extraResources is empty, roles = static only).
+  # pass 2 Crossplane has fetched the entries and .extraResources is populated.
+  - step: render-workspace
     functionRef:
       name: go-templating
     input:
@@ -97,10 +37,6 @@ spec:
           {{- $xr   := .observed.composite.resource }}
           {{- $spec := $xr.spec }}
           {{- $name := $xr.metadata.name }}
-
-          {{- /* Declare ExtraResources so crossplane fetches matching LDAP Entries. */}}
-          {{- /* Uses arbitrary matchLabels from spec so one Entry can carry         */}}
-          {{- /* different label keys and be a member of multiple servers.           */}}
           {{- if $spec.entrySelector }}
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: ExtraResources
@@ -114,87 +50,29 @@ spec:
               {{- end }}
           ---
           {{- end }}
-
-          {{- /* Merge static roles + entry names. On the first pass extraResources  */}}
-          {{- /* is empty; crossplane re-reconciles and entries appear on pass two.  */}}
           {{- $staticRoles := $spec.roles | default list }}
           {{- $entryRoles  := list }}
-          {{- with index .extraResources "entries" }}
-          {{-   range $e := .items }}
-          {{-     $entryRoles = append $entryRoles (dict "name" $e.resource.metadata.name) }}
+          {{- if .extraResources }}
+          {{-   with index .extraResources "entries" }}
+          {{-     range $e := .items }}
+          {{-       $entryRoles = append $entryRoles (dict "name" $e.resource.metadata.name) }}
+          {{-     end }}
           {{-   end }}
           {{- end }}
           {{- $allRoles := concat $staticRoles $entryRoles }}
-
-          {{- /* Read the Workspace from desired state so we carry over all */}}
-          {{- /* fields set by patch-and-transform in step 2.              */}}
-          {{- $ws := dict }}
-          {{- if .desired.resources }}
-          {{-   $entry := index .desired.resources "workspace" }}
-          {{-   if $entry }}
-          {{-     $ws = $entry.resource }}
-          {{-   end }}
-          {{- end }}
-
           ---
-          apiVersion: opentofu.upbound.io/v1beta1
-          kind: ProviderConfig
-          metadata:
-            name: {{ $name }}
-            annotations:
-              gotemplating.fn.crossplane.io/composition-resource-name: provider-config
-          spec:
-            configuration: |
-              terraform {
-                backend "kubernetes" {
-                  secret_suffix     = "server-{{ $name }}"
-                  namespace         = "data"
-                  in_cluster_config = true
-                }
-              }
-              locals {
-                username = trimspace(file("username"))
-                password = trimspace(file("password"))
-              }
-              provider "postgresql" {
-                host     = "{{ $spec.host }}"
-                port     = {{ $spec.port | default 5432 }}
-                username = local.username
-                password = local.password
-                sslmode  = "{{ $spec.sslmode | default "disable" }}"
-              }
-            credentials:
-            - filename: username
-              source: Secret
-              secretRef:
-                namespace: {{ $spec.credentialsRef.namespace }}
-                name: {{ $spec.credentialsRef.name }}
-                key: username
-            - filename: password
-              source: Secret
-              secretRef:
-                namespace: {{ $spec.credentialsRef.namespace }}
-                name: {{ $spec.credentialsRef.name }}
-                key: password
-
-          ---
-          {{- /* Re-output the Workspace carrying over step-2 patches */}}
-          {{- /* and replacing varmap.roles with the merged list.      */}}
           apiVersion: opentofu.upbound.io/v1beta1
           kind: Workspace
           metadata:
-            name: {{ dig "metadata" "name" (printf "%s.server.postgresql" $name) $ws }}
+            name: {{ $name }}.server.postgresql
             annotations:
               gotemplating.fn.crossplane.io/composition-resource-name: workspace
-              crossplane.io/external-name: {{ dig "metadata" "annotations" "crossplane.io/external-name" (printf "%s-server" $name) $ws }}
+              crossplane.io/external-name: {{ $name }}-server
           spec:
             providerConfigRef:
-              name: {{ dig "spec" "providerConfigRef" "name" $name $ws }}
+              name: {{ $name }}
             forProvider:
               source: Remote
               module: github.com/kubed-io/terraform-postgresql-postgresql//modules/server?ref=main
               varmap:
-                host: {{ dig "spec" "forProvider" "varmap" "host" $spec.host $ws }}
-                port: {{ dig "spec" "forProvider" "varmap" "port" ($spec.port | default 5432) $ws }}
-                sslmode: {{ dig "spec" "forProvider" "varmap" "sslmode" ($spec.sslmode | default "disable") $ws }}
                 roles: {{ $allRoles | toJson }}
