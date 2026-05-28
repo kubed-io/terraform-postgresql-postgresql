@@ -117,6 +117,14 @@ spec:
             description: A Status represents the observed state
             type: object
             properties:
+              resourceCount:
+                description: Number of resources currently using this server's ProviderConfig.
+                type: integer
+              roles:
+                description: Names of the roles currently managed on this server.
+                type: array
+                items:
+                  type: string
               share:
                 description: Freeform field containing status information
                 type: object

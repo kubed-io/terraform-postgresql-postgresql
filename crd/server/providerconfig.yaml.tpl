@@ -6,6 +6,8 @@ apiVersion: opentofu.upbound.io/v1beta1
 kind: ProviderConfig
 metadata:
   name: {{ $name }}
+  labels:
+    crossplane.io/composite: {{ $name }}
   annotations:
     gotemplating.fn.crossplane.io/composition-resource-name: provider-config
     gotemplating.fn.crossplane.io/ready: "True"

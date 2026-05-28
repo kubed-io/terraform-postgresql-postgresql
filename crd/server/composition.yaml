@@ -50,6 +50,22 @@ spec:
               {{- end }}
           ---
           {{- end }}
+          {{- $ws := index .observed.resources "workspace" }}
+          {{- $pc := index .observed.resources "provider-config" }}
+          {{- if or (and $ws $ws.resource.status.atProvider.outputs.roles) (and $pc $pc.resource.status.users) }}
+          apiVersion: postgresql.kubed.io/v1alpha1
+          kind: Server
+          metadata:
+            name: {{ $name }}
+          status:
+            {{- if and $ws $ws.resource.status.atProvider.outputs.roles }}
+            roles: {{ $ws.resource.status.atProvider.outputs.roles | toJson }}
+            {{- end }}
+            {{- if and $pc $pc.resource.status.users }}
+            resourceCount: {{ $pc.resource.status.users }}
+            {{- end }}
+          ---
+          {{- end }}
           {{- if not $spec.purge }}
           {{-   $staticRoles := $spec.roles | default list }}
           {{-   $entryRoles  := list }}
