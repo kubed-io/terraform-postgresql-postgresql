@@ -4,7 +4,11 @@ resource "postgresql_schema" "this" {
   }
   name          = each.value.name
   database      = postgresql_database.this.name
-  owner         = try(each.value.owner, postgresql_database.this.owner)
+  # owner is optional(string) → omitted entries materialize as null, which try()
+  # does NOT skip (null is a valid value, not an error). coalesce returns the first
+  # non-null, so an omitted owner falls through to the database owner — matching the
+  # variable's documented "owned by the database owner" default.
+  owner         = coalesce(each.value.owner, postgresql_database.this.owner)
   if_not_exists = each.value.ifNotExists
   drop_cascade  = each.value.dropCascade
   dynamic "policy" {
