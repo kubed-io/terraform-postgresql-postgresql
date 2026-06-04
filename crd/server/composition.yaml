@@ -37,15 +37,15 @@ spec:
           {{- $xr   := .observed.composite.resource }}
           {{- $spec := $xr.spec }}
           {{- $name := $xr.metadata.name }}
-          {{- if $spec.entrySelector }}
+          {{- if $spec.serviceAccountSelector }}
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: ExtraResources
           requirements:
-            entries:
+            serviceaccounts:
               apiVersion: ldap.kubed.io/v1alpha1
-              kind: Entry
+              kind: ServiceAccount
               matchLabels:
-              {{- range $k, $v := $spec.entrySelector.matchLabels }}
+              {{- range $k, $v := $spec.serviceAccountSelector.matchLabels }}
                 {{ $k }}: "{{ $v }}"
               {{- end }}
           ---
@@ -68,15 +68,15 @@ spec:
           {{- end }}
           {{- if not $spec.purge }}
           {{-   $staticRoles := $spec.roles | default list }}
-          {{-   $entryRoles  := list }}
+          {{-   $saRoles     := list }}
           {{-   if .extraResources }}
-          {{-     with index .extraResources "entries" }}
+          {{-     with index .extraResources "serviceaccounts" }}
           {{-       range $e := .items }}
-          {{-         $entryRoles = append $entryRoles (dict "name" $e.resource.metadata.name) }}
+          {{-         $saRoles = append $saRoles (dict "name" $e.resource.metadata.name) }}
           {{-       end }}
           {{-     end }}
           {{-   end }}
-          {{-   $allRoles := concat $staticRoles $entryRoles | default list }}
+          {{-   $allRoles := concat $staticRoles $saRoles | default list }}
           ---
           apiVersion: opentofu.upbound.io/v1beta1
           kind: Workspace

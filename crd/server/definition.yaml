@@ -52,16 +52,17 @@ spec:
                     type: string
                   name:
                     type: string
-              entrySelector:
+              serviceAccountSelector:
                 type: object
                 description: |
-                  Selects LDAP Entry CRDs by label to provision as login roles on this server.
-                  Any Entry matching all labels gets a postgres role (login: true, name = entry name).
-                  Using different label keys per server allows one Entry to be on multiple servers.
+                  Selects ldap.kubed.io ServiceAccount CRDs by label to provision as login
+                  roles on this server. Any ServiceAccount matching all labels gets a postgres
+                  role (login: true, name = service account name). Using different label keys
+                  per server allows one ServiceAccount to be a login on multiple servers.
                 properties:
                   matchLabels:
                     type: object
-                    description: Labels that LDAP Entry resources must have to be included.
+                    description: Labels that ServiceAccount resources must have to be included.
                     x-kubernetes-preserve-unknown-fields: true
               purge:
                 type: boolean
