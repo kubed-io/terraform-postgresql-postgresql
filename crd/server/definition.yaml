@@ -52,17 +52,22 @@ spec:
                     type: string
                   name:
                     type: string
-              serviceAccountSelector:
+              clientSelector:
                 type: object
                 description: |
-                  Selects ldap.kubed.io ServiceAccount CRDs by label to provision as login
-                  roles on this server. Any ServiceAccount matching all labels gets a postgres
-                  role (login: true, name = service account name). Using different label keys
-                  per server allows one ServiceAccount to be a login on multiple servers.
+                  Selects ONE ldap.kubed.io Client CRD by label (first match wins, 1 client ->
+                  1 server for now). The Server reads the Client's published status.members
+                  (full merged membership, { dn, role }) and status.defaultRole, then builds a
+                  postgres role tree:
+                    - each NON-default client-role  -> a structural parent role (login: false, no parent)
+                    - a member in the DEFAULT role  -> a top-level login role (no parent)
+                    - a member in a non-default role -> a login role parented to that client-role
+                  The owner seed is created once at top level (default role) and skipped elsewhere.
+                  Role names are the uid RDN of each member DN.
                 properties:
                   matchLabels:
                     type: object
-                    description: Labels that ServiceAccount resources must have to be included.
+                    description: Labels the Client resource must carry to be selected.
                     x-kubernetes-preserve-unknown-fields: true
               purge:
                 type: boolean

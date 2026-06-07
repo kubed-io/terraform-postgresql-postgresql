@@ -37,21 +37,25 @@ spec:
           {{- $xr   := .observed.composite.resource }}
           {{- $spec := $xr.spec }}
           {{- $name := $xr.metadata.name }}
-          {{- if $spec.serviceAccountSelector }}
+
+          {{/* Select ONE Client by clientSelector (first match wins). */}}
+          {{- if $spec.clientSelector }}
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: ExtraResources
           requirements:
-            serviceaccounts:
+            clients:
               apiVersion: ldap.kubed.io/v1alpha1
-              kind: ServiceAccount
+              kind: Client
               matchLabels:
-              {{- range $k, $v := $spec.serviceAccountSelector.matchLabels }}
+              {{- range $k, $v := $spec.clientSelector.matchLabels }}
                 {{ $k }}: "{{ $v }}"
               {{- end }}
           ---
           {{- end }}
-          {{- $ws := index .observed.resources "workspace" }}
-          {{- $pc := index .observed.resources "provider-config" }}
+
+          {{- $observed := .observed.resources | default dict }}
+          {{- $ws := index $observed "workspace" }}
+          {{- $pc := index $observed "provider-config" }}
           {{- if or (and $ws $ws.resource.status.atProvider.outputs.roles) (and $pc $pc.resource.status.users) }}
           apiVersion: postgresql.kubed.io/v1alpha1
           kind: Server
@@ -66,17 +70,60 @@ spec:
             {{- end }}
           ---
           {{- end }}
+
           {{- if not $spec.purge }}
           {{-   $staticRoles := $spec.roles | default list }}
-          {{-   $saRoles     := list }}
+
+          {{/* Read the selected Client's published members + default role. */}}
+          {{-   $client      := dict }}
           {{-   if .extraResources }}
-          {{-     with index .extraResources "serviceaccounts" }}
-          {{-       range $e := .items }}
-          {{-         $saRoles = append $saRoles (dict "name" $e.resource.metadata.name) }}
+          {{-     with index .extraResources "clients" }}
+          {{-       if .items }}{{ $client = (index .items 0).resource }}{{ end }}
+          {{-     end }}
+          {{-   end }}
+          {{-   $members     := dig "status" "members"      list $client }}
+          {{-   $defaultRole := dig "status" "defaultRole"  ""   $client }}
+          {{-   $ownerDn     := dig "status" "selectedOwner" ""  $client }}
+
+          {{/* tree: default-role members -> top-level login roles; non-default roles -> no-login parents with members nested; owner DN excluded everywhere; dup names created once */}}
+          {{-   $derived := list }}
+          {{-   $seen    := dict }}
+
+          {{/* 1) structural parent roles for every non-default client-role present */}}
+          {{-   $roleSet := dict }}
+          {{-   range $m := $members }}
+          {{-     if ne $m.dn $ownerDn }}
+          {{-       $r := $m.role | default $defaultRole }}
+          {{-       if and (ne $r "") (ne $r $defaultRole) }}{{ $roleSet = set $roleSet $r true }}{{ end }}
+          {{-     end }}
+          {{-   end }}
+          {{-   range $r, $_ := $roleSet }}
+          {{-     $derived = append $derived (dict "name" $r "privileges" (dict "login" false)) }}
+          {{-     $seen = set $seen $r true }}
+          {{-   end }}
+
+          {{/* 2) member login roles — default first (top-level), then nested. Owner skipped. */}}
+          {{-   range $pass := (list "default" "nested") }}
+          {{-     range $m := $members }}
+          {{-       if ne $m.dn $ownerDn }}
+          {{-         $r   := $m.role | default $defaultRole }}
+          {{-         $isDefault := or (eq $r "") (eq $r $defaultRole) }}
+          {{-         if or (and (eq $pass "default") $isDefault) (and (eq $pass "nested") (not $isDefault)) }}
+          {{/* role name = uid RDN of the member DN (uid=n8n,ou=... -> n8n) */}}
+          {{-           $rdn  := index (splitList "," $m.dn) 0 }}
+          {{-           $rname := trimPrefix "uid=" $rdn }}
+          {{-           if not (hasKey $seen $rname) }}
+          {{-             $seen = set $seen $rname true }}
+          {{-             $role := dict "name" $rname "privileges" (dict "login" true) }}
+          {{-             if not $isDefault }}{{ $role = set $role "roles" (list $r) }}{{ end }}
+          {{-             $derived = append $derived $role }}
+          {{-           end }}
+          {{-         end }}
           {{-       end }}
           {{-     end }}
           {{-   end }}
-          {{-   $allRoles := concat $staticRoles $saRoles | default list }}
+
+          {{-   $allRoles := concat $staticRoles $derived | default list }}
           ---
           apiVersion: opentofu.upbound.io/v1beta1
           kind: Workspace
