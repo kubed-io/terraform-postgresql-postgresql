@@ -84,22 +84,18 @@ spec:
           {{-   $members     := dig "status" "members"      list $client }}
           {{-   $defaultRole := dig "status" "defaultRole"  ""   $client }}
           {{-   $ownerDn     := dig "status" "selectedOwner" ""  $client }}
+          {{-   $clientRoles := dig "spec"   "roles"        list $client }}
 
-          {{/* tree: default-role members -> top-level login roles; non-default roles -> no-login parents with members nested; owner DN excluded everywhere; dup names created once */}}
+          {{/* tree: default-role members -> top-level login roles; every NON-default declared client-role -> a no-login parent role (always, even empty); its members nest under it; owner excluded; dup names created once */}}
           {{-   $derived := list }}
           {{-   $seen    := dict }}
 
-          {{/* 1) structural parent roles for every non-default client-role present */}}
-          {{-   $roleSet := dict }}
-          {{-   range $m := $members }}
-          {{-     if ne $m.dn $ownerDn }}
-          {{-       $r := $m.role | default $defaultRole }}
-          {{-       if and (ne $r "") (ne $r $defaultRole) }}{{ $roleSet = set $roleSet $r true }}{{ end }}
+          {{/* 1) one structural parent role per DECLARED non-default client-role (source of truth = client spec.roles, so the role exists even with no members) */}}
+          {{-   range $cr := $clientRoles }}
+          {{-     if ne $cr.name $defaultRole }}
+          {{-       $derived = append $derived (dict "name" $cr.name "privileges" (dict "login" false)) }}
+          {{-       $seen = set $seen $cr.name true }}
           {{-     end }}
-          {{-   end }}
-          {{-   range $r, $_ := $roleSet }}
-          {{-     $derived = append $derived (dict "name" $r "privileges" (dict "login" false)) }}
-          {{-     $seen = set $seen $r true }}
           {{-   end }}
 
           {{/* 2) member login roles — default first (top-level), then nested. Owner skipped. */}}
