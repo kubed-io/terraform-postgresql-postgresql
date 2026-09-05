@@ -33,10 +33,10 @@ spec:
               module: github.com/kubed-io/terraform-postgresql-postgresql//modules/role?ref=main
               # filled out by the patch-and-transform function in the composition
               varmap: {}
-            # these get overwritten by the patch transformer
-            # writeConnectionSecretToRef:
-            #   namespace: data  # default, but can be overridden by secretTargetNamespace
-            #   name: postgresql-entry
+            # writeConnectionSecretToRef is deliberately absent here: the patches below
+            # only set it when spec.connectionSecret is given, and a Workspace without
+            # it publishes no secret. Roles that cannot log in have no credentials to
+            # publish, and the XRD refuses connectionSecret unless privileges.login.
         patches: 
 
         # name after the instance name
@@ -78,4 +78,11 @@ spec:
         - type: FromCompositeFieldPath
           fromFieldPath: spec.privileges
           toFieldPath: spec.forProvider.varmap.privileges
-            
+
+        # --- connection secret (keys: username, password) ---
+        # both sides are {name, namespace}, so copy the object whole
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.connectionSecret
+          toFieldPath: spec.writeConnectionSecretToRef
+          policy:
+            fromFieldPath: Optional

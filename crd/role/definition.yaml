@@ -58,6 +58,21 @@ spec:
                     description: (Optional) Defines whether the role can create new databases. Default value is false.
                     type: boolean
                     default: false
+              connectionSecret:
+                type: object
+                nullable: true
+                description: Where to publish the generated credentials (keys username, password). Only valid when privileges.login is true; omit it and no secret is written.
+                properties:
+                  namespace:
+                    type: string
+                    description: Namespace for the connection secret.
+                    default: crossplane
+                  name:
+                    type: string
+                    description: Name for the connection secret.
+            x-kubernetes-validations:
+            - rule: "!has(self.connectionSecret) || (has(self.privileges) && self.privileges.login)"
+              message: connectionSecret requires privileges.login to be true
           status:
             description: A Status represents the observed state
             type: object
