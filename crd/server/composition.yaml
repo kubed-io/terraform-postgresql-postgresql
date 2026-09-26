@@ -39,7 +39,7 @@ spec:
           {{- $name := $xr.metadata.name }}
 
           {{/* Select ONE Client by clientSelector (first match wins). */}}
-          {{- if $spec.clientSelector }}
+          {{- if dig "clientSelector" "matchLabels" dict $spec }}
           apiVersion: meta.gotemplating.fn.crossplane.io/v1alpha1
           kind: ExtraResources
           requirements:
