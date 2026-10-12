@@ -97,13 +97,13 @@ variable "grants" {
   # https://search.opentofu.org/provider/cyrilgdn/postgresql/v1.25.0/docs/resources/postgresql_grant
   description = "(Optional) A set of grants to apply to the database after it has been created."
   type = set(object({
-    role              = string
-    privileges        = set(string)
-    schema            = optional(string, null)
-    objectType        = optional(string, "database")
-    objects           = optional(set(string), null)
-    columns           = optional(set(string), null)
-    withGrantOption   = optional(bool, false)
+    role            = string
+    privileges      = set(string)
+    schema          = optional(string, null)
+    objectType      = optional(string, "database")
+    objects         = optional(set(string), null)
+    columns         = optional(set(string), null)
+    withGrantOption = optional(bool, false)
   }))
   default = []
 }
