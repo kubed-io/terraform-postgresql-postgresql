@@ -32,7 +32,7 @@ spec:
               source: Remote
               # the module is pulled once per ?ref, not on every reconcile
               remotePullPolicy: IfNotPresent
-              module: github.com/kubed-io/terraform-postgresql-postgresql//modules/role?ref=main
+              module: github.com/kubed-io/terraform-postgresql-postgresql//modules/role?ref=v0.0.2
               # filled out by the patch-and-transform function in the composition
               varmap: {}
             # writeConnectionSecretToRef is deliberately absent here: the patches below
