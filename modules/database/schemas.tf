@@ -2,8 +2,8 @@ resource "postgresql_schema" "this" {
   for_each = {
     for schema in var.schemas : schema.name => schema
   }
-  name          = each.value.name
-  database      = postgresql_database.this.name
+  name     = each.value.name
+  database = postgresql_database.this.name
   # owner is optional(string) → omitted entries materialize as null, which try()
   # does NOT skip (null is a valid value, not an error). coalesce returns the first
   # non-null, so an omitted owner falls through to the database owner — matching the

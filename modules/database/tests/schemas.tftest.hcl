@@ -12,7 +12,7 @@ run "schema_owner_defaults_to_db_owner" {
     name  = "app_db"
     owner = "app_owner"
     schemas = [
-      { name = "tenant_a" },                    # owner omitted -> inherit db owner
+      { name = "tenant_a" },                     # owner omitted -> inherit db owner
       { name = "tenant_b", owner = "explicit" }, # owner set      -> use it
     ]
   }

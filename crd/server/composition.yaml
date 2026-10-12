@@ -134,6 +134,8 @@ spec:
               name: {{ $name }}
             forProvider:
               source: Remote
+              # the module is pulled once per ?ref, not on every reconcile
+              remotePullPolicy: IfNotPresent
               module: github.com/kubed-io/terraform-postgresql-postgresql//modules/server?ref=main
               varmap:
                 roles: {{ $allRoles | toJson }}
